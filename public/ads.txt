@@ -1,0 +1,3 @@
+# Google AdSense ads.txt placeholder
+# 部署上線並通過審核後，請將下面的 pub-xxxxxxxxxxxxxxxx 替換為您的 Google AdSense 發布商 ID (Publisher ID)
+google.com, pub-xxxxxxxxxxxxxxxx, DIRECT, f08c47fec0942fa0

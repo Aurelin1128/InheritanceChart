@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://inheritance-tree.vercel.app/sitemap.xml
