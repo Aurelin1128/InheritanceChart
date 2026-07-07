@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import type { 
-  FamilyMember, 
-  SuccessionStatus 
+import type {
+  FamilyMember,
+  SuccessionStatus
 } from './types';
 
 
 import { exportToExcel, calculateAutoLayout, getColumnIndex, formatMemberText, resolveRowConflicts } from './utils/excelGenerator';
-import { 
-  Download, 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  User, 
-  Users, 
-  Heart, 
+import {
+  Download,
+  Plus,
+  Trash2,
+  Edit3,
+  User,
+  Users,
+  Heart,
   AlertTriangle,
   Info
 } from 'lucide-react';
@@ -36,7 +36,7 @@ import './App.css';
 const parseDateString = (dateStr: string) => {
   const defaultVal = { era: '民國', year: 1, month: 1, day: 1, isEmpty: true };
   if (!dateStr) return defaultVal;
-  
+
   const regex = /^(民國|民前|明治|大正|昭和|西元)(\d+)年(\d+)月(\d+)日$/;
   const match = dateStr.match(regex);
   if (match) {
@@ -55,7 +55,7 @@ const parseDateString = (dateStr: string) => {
 // 業務邏輯：依據台灣繼承實務上常見的明治、大正、昭和、民國年號，自動折算為西元年
 const convertToCommonEra = (era: string, year: number, month: number, day: number): string => {
   if (isNaN(year) || isNaN(month) || isNaN(day)) return '日期無效';
-  
+
   let ceYear = 0;
   if (era === '民國') ceYear = year + 1911;
   else if (era === '民前') ceYear = 1912 - year;
@@ -63,7 +63,7 @@ const convertToCommonEra = (era: string, year: number, month: number, day: numbe
   else if (era === '大正') ceYear = year + 1911;
   else if (era === '昭和') ceYear = year + 1925;
   else if (era === '西元') ceYear = year;
-  
+
   if (ceYear <= 0) {
     return `西元前 ${Math.abs(ceYear) + 1} 年 ${month} 月 ${day} 日`;
   }
@@ -97,7 +97,7 @@ const toDateInt = (era: string, year: number, month: number, day: number): numbe
 // 業務邏輯：確保使用者在網頁上點選的日期為有效曆法日期
 const getDaysInMonth = (era: string, year: number, month: number): number => {
   if (isNaN(year) || isNaN(month)) return 31;
-  
+
   // 計算西元年份以判定閏年
   let ceYear = 0;
   if (era === '民國') ceYear = year + 1911;
@@ -106,7 +106,7 @@ const getDaysInMonth = (era: string, year: number, month: number): number => {
   else if (era === '大正') ceYear = year + 1911;
   else if (era === '昭和') ceYear = year + 1925;
   else if (era === '西元') ceYear = year;
-  
+
   if ([1, 3, 5, 7, 8, 10, 12].includes(month)) return 31;
   if ([4, 6, 9, 11].includes(month)) return 30;
   if (month === 2) {
@@ -136,11 +136,11 @@ export default function App() {
   const [rootMember, setRootMember] = useState<FamilyMember>(initialRootMember);
   const [rootSpouses, setRootSpouses] = useState<Omit<FamilyMember, 'children'>[]>([]);
   const [spousesMap, setSpousesMap] = useState<Record<string, Omit<FamilyMember, 'children'>>>({});
-  
+
   // 編輯彈窗狀態
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
-  
+
   // 當前選取並高亮的成員 ID (與網頁預覽連動)
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
@@ -209,6 +209,25 @@ export default function App() {
       });
   }, []);
 
+  // 網頁預覽縮放狀態
+  const [zoom, setZoom] = useState(1.0);
+
+  // 根據螢幕尺寸初始化預覽區的縮放比例，提升行動端/平板 RWD 體驗
+  useEffect(() => {
+    const handleZoomInit = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        setZoom(0.5); // 手機預設縮小到 50%
+      } else if (width < 1024) {
+        setZoom(0.75); // 平板預設縮小到 75%
+      } else {
+        setZoom(1.0); // 電腦預設 100%
+      }
+    };
+    handleZoomInit();
+    // 只有在載入時自動初始化一次，後續允許使用者手動拉動 Slider 調整
+  }, []);
+
   // 出生日期拆解與換算狀態
   const [birthEra, setBirthEra] = useState('民國');
   const [birthYear, setBirthYear] = useState(1);
@@ -263,7 +282,7 @@ export default function App() {
   }, [deathEra, deathYear, deathMonth, deathDay]);
 
   // --- 輔助函數：深入遍歷搜尋與修改樹狀結構 ---
-  
+
   // 尋找樹中的某個成員
   const findMemberInTree = (node: FamilyMember, id: string): FamilyMember | null => {
     if (node.id === id) return node;
@@ -336,7 +355,7 @@ export default function App() {
       }
       setSelectedMember(tempMember);
       setFormErrors({});
-      
+
       // 解析並載入出生日期選單狀態
       const parsedBirth = parseDateString(memberToEdit.birthDate);
       setBirthEra(parsedBirth.era);
@@ -351,7 +370,7 @@ export default function App() {
       setDeathYear(parsedDeath.year);
       setDeathMonth(parsedDeath.month);
       setDeathDay(parsedDeath.day);
-      
+
       // 解析無繼承權原因
       let reason = '';
       if (memberToEdit.successionStatus === 'no-inherit' && memberToEdit.successionStatusText) {
@@ -702,7 +721,7 @@ export default function App() {
       if (delta !== 0 && oldRow > 0) {
         const shiftedRoot = applyAdjustToSubtree(rootNode, oldRow, newTargetRow);
         nextRoot = { ...shiftedRoot, targetRow: newTargetRow };
-        
+
         nextRootSp = nextRootSp.map(sp => {
           const spRow = currentMap.get(sp.id);
           return spRow ? { ...sp, targetRow: computeNewRow(spRow, oldRow, newTargetRow) } : sp;
@@ -813,7 +832,7 @@ export default function App() {
     // 自動估算下一個子女的姓名/性別與排序：採一男一女交替順序
     const numChildren = parent.children.length;
     const gender = numChildren % 2 === 0 ? 'M' : 'F';
-    
+
     // 計算目前的男/女人數來估算正確的出生序別
     const prefixMap = ['長', '次', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五'];
     let birthOrder = '';
@@ -934,8 +953,8 @@ export default function App() {
     }
   };
 
-  
-  
+
+
   // 清除所有資料並重新開始 (僅保留一個空的被繼承人節點)
   // 業務邏輯：提供使用者一鍵清空所有歷史範本數據、建立全新家族樹的工具，含防呆確認彈窗
   const handleClearAllData = () => {
@@ -972,7 +991,7 @@ export default function App() {
 
     return (
       <div key={member.id} className="tree-node-container" style={{ margin: '4px 0' }}>
-        <div 
+        <div
           className={`tree-node-item ${highlightedId === member.id ? 'selected' : ''}`}
           onClick={(e) => {
             e.stopPropagation();
@@ -995,7 +1014,7 @@ export default function App() {
                 </span>
               )}
             </div>
-            
+
             <div className="node-actions" onClick={e => e.stopPropagation()}>
               <button className="node-btn" onClick={() => handleEditClick(member.id)} title="編輯詳細資料">
                 <Edit3 size={12} />
@@ -1022,16 +1041,16 @@ export default function App() {
               )}
             </div>
           </div>
-          
+
           {/* 顯示配偶資訊 */}
           {spouse && (
-            <div 
-              className="tree-node-spouse-badge" 
-              style={{ 
-                marginTop: '6px', 
-                padding: '6px 10px', 
-                background: 'rgba(239, 68, 68, 0.05)', 
-                borderRadius: '6px', 
+            <div
+              className="tree-node-spouse-badge"
+              style={{
+                marginTop: '6px',
+                padding: '6px 10px',
+                background: 'rgba(239, 68, 68, 0.05)',
+                borderRadius: '6px',
                 borderLeft: '2px solid rgba(239, 68, 68, 0.4)',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -1052,7 +1071,7 @@ export default function App() {
             </div>
           )}
         </div>
-        
+
         {/* 遞迴顯示子節點 */}
         {member.children && member.children.length > 0 && (
           <div className="tree-node-children">
@@ -1064,14 +1083,14 @@ export default function App() {
   };
 
   // --- 計算預覽所需佈局與二維網格大小 ---
-  
+
   // 計算已定義的最大 Row 索引，並產生預覽網格
   // 業務邏輯修正：先執行自動排版演算法取得完整佈局，再將使用者手動指定的 targetRow 蓋回（覆蓋 auto 值）
   // 如此確保：(1) 所有成員都能有預設位置，(2) 已手動設定 Row 的成員會精確顯示在指定列
   const getPreviewLayout = () => {
     // 步驟一：先以自動演算法計算出所有成員的預設列位置
     const rowMap = calculateAutoLayout(rootMember, rootSpouses, spousesMap);
-    
+
     // 步驟二：蒐集所有已手動指定 targetRow 的成員，並以手動值覆蓋自動計算的結果
     const applyManualRows = (member: FamilyMember) => {
       // 若成員有手動設定 targetRow，以手動值為準
@@ -1083,7 +1102,7 @@ export default function App() {
       }
       member.children.forEach(applyManualRows);
     };
-    
+
     // 對被繼承人本人進行檢查（含其整棵子樹）
     applyManualRows(rootMember);
     // 對被繼承人多任配偶進行檢查
@@ -1112,11 +1131,11 @@ export default function App() {
       const childRows = member.children
         .map(c => rowMap.get(c.id))
         .filter((r): r is number => r !== undefined);
-      
+
       if (childRows.length > 0) {
         const minChildR = Math.min(...childRows);
         const maxChildR = Math.max(...childRows);
-        
+
         // 業務邏輯：縱向連接線的範圍由「父親本人 Row」到「最後一個子女 Row」決定
         // 設計說明：配偶本身已經有水平線（'-----'）接入縱線，不需將配偶 Row 納入縱線範圍
         // 判斷條件：對一般繼承人（非被繼承人），配偶如果在父親下方，
@@ -1167,7 +1186,7 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      
+
       {/* 頂部導覽列 */}
       <header className="header-container">
         <div className="header-title-area">
@@ -1181,14 +1200,14 @@ export default function App() {
             </p>
           </div>
         </div>
-        
+
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button 
-            className="btn" 
+          <button
+            className="btn"
             onClick={() => setIsIntroOpen(true)}
-            style={{ 
-              background: 'rgba(99, 102, 241, 0.1)', 
-              color: 'var(--primary)', 
+            style={{
+              background: 'rgba(99, 102, 241, 0.1)',
+              color: 'var(--primary)',
               border: '1px solid rgba(99, 102, 241, 0.2)',
               display: 'flex',
               alignItems: 'center',
@@ -1207,28 +1226,28 @@ export default function App() {
       </header>
 
       {/* 主體雙欄排版 */}
-      <main 
-        className="main-layout" 
-        style={{ 
+      <main
+        className="main-layout"
+        style={{
           gridTemplateColumns: isMobile ? '1fr' : `${sidebarWidth}px 6px 1fr`,
           gap: isMobile ? '20px' : '0px' // 拖動時不需要間距，分隔線即是間隔
         }}
       >
-        
+
         {/* 左側：關係樹編輯面板 */}
         <section className="glass-panel sidebar-panel">
           <h2 className="panel-title">
             <Users size={20} color="var(--primary)" /> 家族關係編輯
           </h2>
-          
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            
+
             {/* 被繼承人及多配偶編輯區 */}
-            <div style={{ 
-              background: 'var(--primary-light)', 
-              padding: '12px', 
-              borderRadius: '12px', 
-              border: '1px solid var(--primary)' 
+            <div style={{
+              background: 'var(--primary-light)',
+              padding: '12px',
+              borderRadius: '12px',
+              border: '1px solid var(--primary)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>👑 被繼承人</span>
@@ -1247,13 +1266,13 @@ export default function App() {
               <div style={{ marginTop: '6px', fontSize: '0.95rem', fontWeight: 600 }}>
                 {rootMember.name} (生: {rootMember.birthDate})
               </div>
-              
+
               {/* 顯示被繼承人的多位配偶 */}
               {rootSpouses.map((sp) => (
-                <div key={sp.id} style={{ 
-                  marginTop: '8px', 
-                  padding: '6px 8px', 
-                  background: 'rgba(255,255,255,0.6)', 
+                <div key={sp.id} style={{
+                  marginTop: '8px',
+                  padding: '6px 8px',
+                  background: 'rgba(255,255,255,0.6)',
                   borderRadius: '6px',
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -1285,26 +1304,76 @@ export default function App() {
         </section>
 
         {!isMobile && (
-          <div 
-            className="layout-splitter" 
+          <div
+            className="layout-splitter"
             onMouseDown={handleSplitterMouseDown}
           />
         )}
 
         {/* 右側：即時網頁預覽 */}
         <section className="glass-panel preview-panel" style={{ padding: '24px' }}>
-          <div className="preview-header">
-            <h2 className="panel-title">
-              <Info size={20} color="var(--info)" /> Excel 排版即時預覽
-            </h2>
+          <div className="preview-header" style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '12px' }}>
+              <h2 className="panel-title" style={{ margin: 0, border: 'none', padding: 0 }}>
+                <Info size={20} color="var(--info)" /> Excel 排版即時預覽
+              </h2>
+              {/* RWD 縮放控制器 */}
+              <div className="zoom-controller" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f1f5f9', padding: '4px 12px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>預覽比例：</span>
+                <button 
+                  onClick={() => setZoom(prev => Math.max(0.4, Number((prev - 0.1).toFixed(1))))}
+                  style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1rem', padding: '0 4px', fontWeight: 'bold', color: '#64748b' }}
+                >
+                  -
+                </button>
+                <input 
+                  type="range" 
+                  min="0.4" 
+                  max="1.5" 
+                  step="0.1" 
+                  value={zoom} 
+                  onChange={e => setZoom(parseFloat(e.target.value))}
+                  style={{ width: '80px', height: '4px', cursor: 'pointer' }}
+                />
+                <button 
+                  onClick={() => setZoom(prev => Math.min(1.5, Number((prev + 0.1).toFixed(1))))}
+                  style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1rem', padding: '0 4px', fontWeight: 'bold', color: '#64748b' }}
+                >
+                  +
+                </button>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)', minWidth: '40px', textAlign: 'right' }}>
+                  {Math.round(zoom * 100)}%
+                </span>
+                <button
+                  onClick={() => {
+                    const width = window.innerWidth;
+                    if (width < 640) setZoom(0.5);
+                    else if (width < 1024) setZoom(0.75);
+                    else setZoom(1.0);
+                  }}
+                  style={{ border: 'none', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  重設
+                </button>
+              </div>
+            </div>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <AlertTriangle size={14} color="var(--warning)" /> 
-              預覽文字採用標楷體呈現，點擊方框可直接選中編輯
+              <AlertTriangle size={14} color="var(--warning)" />
+              預覽文字採用標楷體呈現，點擊方框可直接選中編輯；在手機平板上可向下滑動或拖拉比例查看。
             </span>
           </div>
 
-          <div className="preview-viewport">
-            <div className="excel-grid-preview">
+          <div className="preview-viewport" style={{ overflow: 'auto', position: 'relative' }}>
+            <div 
+              style={{
+                transform: `scale(${zoom})`,
+                transformOrigin: 'top left',
+                width: `${980 * zoom}px`,
+                height: `${(maxRow * 98 + 320) * zoom}px`,
+                transition: 'transform 0.15s ease, width 0.15s ease, height 0.15s ease'
+              }}
+            >
+              <div className="excel-grid-preview" style={{ margin: 0 }}>
               <div style={{ textAlign: 'center', fontSize: '2.5rem', marginBottom: '20px', fontFamily: 'var(--font-kai)' }}>
                 {rootMember.name} 繼承系統表
               </div>
@@ -1321,207 +1390,207 @@ export default function App() {
               </div>
 
               {/* 模擬 Excel Grid */}
-              <div 
-                className="excel-canvas" 
-                style={{ 
+              <div
+                className="excel-canvas"
+                style={{
                   gridTemplateRows: `repeat(${maxRow}, 98px)` // 每一行固定 Excel 高度
                 }}
               >
-                 {/* 背景格線與 Row 號標示標頭 */}
-                 {Array.from({ length: maxRow }, (_, rIdx) => rIdx + 1).map(rowNum => {
-                   const isHovered = activeHoverRow === rowNum;
-                   return (
-                     <React.Fragment key={`row-header-group-${rowNum}`}>
-                       {/* Row 序號標頭 */}
-                       <div 
-                         style={{
-                           gridColumn: 1,
-                           gridRow: rowNum,
-                           display: 'flex',
-                           alignItems: 'center',
-                           justifyContent: 'center',
-                           background: isHovered ? '#cbd5e1' : '#f8fafc',
-                           borderRight: '2px solid #cbd5e1',
-                           borderBottom: '1px dashed #cbd5e1',
-                           fontSize: '0.7rem',
-                           color: '#64748b',
-                           fontWeight: 'bold',
-                           userSelect: 'none',
-                           height: '98px',
-                           boxSizing: 'border-box',
-                           transition: 'background-color 0.15s ease'
-                         }}
-                       >
-                         Row {rowNum}
-                       </div>
-                       {/* 背景橫向格線 (作為 Drag 置放目標) */}
-                       <div 
-                         onDragOver={(e) => {
-                           e.preventDefault(); // 必須 preventDefault 瀏覽器才會允許 drop
-                           setActiveHoverRow(rowNum);
-                         }}
-                         onDragLeave={() => {
-                           setActiveHoverRow(null);
-                         }}
-                         onDrop={(e) => {
-                           e.preventDefault();
-                           setActiveHoverRow(null);
-                           const memberId = e.dataTransfer.getData('text/plain');
-                           if (memberId) {
-                             handleDragDropRow(memberId, rowNum);
-                           }
-                         }}
-                         style={{
-                           gridColumn: '2 / span 7',
-                           gridRow: rowNum,
-                           borderBottom: '1px dashed #cbd5e1',
-                           height: '98px',
-                           boxSizing: 'border-box',
-                           background: isHovered ? 'rgba(15, 23, 42, 0.05)' : 'transparent',
-                           borderTop: isHovered ? '2px solid var(--text-main)' : undefined,
-                           borderBottomStyle: isHovered ? 'solid' : 'dashed',
-                           borderBottomColor: isHovered ? 'var(--text-main)' : '#cbd5e1',
-                           borderBottomWidth: isHovered ? '2px' : '1px',
-                           transition: 'background-color 0.15s ease, border 0.15s ease'
-                         }}
-                       />
-                     </React.Fragment>
-                   );
-                 })}
-
-                 {/* 1. 渲染被繼承人 (平移至第 2 欄，即 C 欄) */}
-                 {(() => {
-                   const r = rowMap.get(rootMember.id);
-                   if (!r) return null;
-                   return (
-<div 
-                        draggable={true}
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData('text/plain', rootMember.id);
+                {/* 背景格線與 Row 號標示標頭 */}
+                {Array.from({ length: maxRow }, (_, rIdx) => rIdx + 1).map(rowNum => {
+                  const isHovered = activeHoverRow === rowNum;
+                  return (
+                    <React.Fragment key={`row-header-group-${rowNum}`}>
+                      {/* Row 序號標頭 */}
+                      <div
+                        style={{
+                          gridColumn: 1,
+                          gridRow: rowNum,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: isHovered ? '#cbd5e1' : '#f8fafc',
+                          borderRight: '2px solid #cbd5e1',
+                          borderBottom: '1px dashed #cbd5e1',
+                          fontSize: '0.7rem',
+                          color: '#64748b',
+                          fontWeight: 'bold',
+                          userSelect: 'none',
+                          height: '98px',
+                          boxSizing: 'border-box',
+                          transition: 'background-color 0.15s ease'
                         }}
-                        onDragOver={(e) => e.preventDefault()}
+                      >
+                        Row {rowNum}
+                      </div>
+                      {/* 背景橫向格線 (作為 Drag 置放目標) */}
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault(); // 必須 preventDefault 瀏覽器才會允許 drop
+                          setActiveHoverRow(rowNum);
+                        }}
+                        onDragLeave={() => {
+                          setActiveHoverRow(null);
+                        }}
                         onDrop={(e) => {
                           e.preventDefault();
-                          e.stopPropagation();
-                          const dragId = e.dataTransfer.getData('text/plain');
-                          if (dragId && dragId !== rootMember.id) {
-                            handleDragDropSwap(dragId, rootMember.id);
+                          setActiveHoverRow(null);
+                          const memberId = e.dataTransfer.getData('text/plain');
+                          if (memberId) {
+                            handleDragDropRow(memberId, rowNum);
                           }
                         }}
-                        className={`excel-cell-box border-r-none ${highlightedId === rootMember.id ? 'selected' : ''}`}
-                        style={{ gridRow: r, gridColumn: 2 }}
-                        onClick={() => handleEditClick(rootMember.id)}
-                      >
-                       {formatMemberText(rootMember)}
-                     </div>
-                   );
-                 })()}
-
-                 {/* 2. 渲染被繼承人的配偶們 (平移至第 2 欄，即 C 欄) */}
-                 {rootSpouses.map(sp => {
-                   const r = rowMap.get(sp.id);
-                   if (!r) return null;
-                   return (
-<div 
-                        key={sp.id}
-                        draggable={true}
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData('text/plain', sp.id);
+                        style={{
+                          gridColumn: '2 / span 7',
+                          gridRow: rowNum,
+                          borderBottom: '1px dashed #cbd5e1',
+                          height: '98px',
+                          boxSizing: 'border-box',
+                          background: isHovered ? 'rgba(15, 23, 42, 0.05)' : 'transparent',
+                          borderTop: isHovered ? '2px solid var(--text-main)' : undefined,
+                          borderBottomStyle: isHovered ? 'solid' : 'dashed',
+                          borderBottomColor: isHovered ? 'var(--text-main)' : '#cbd5e1',
+                          borderBottomWidth: isHovered ? '2px' : '1px',
+                          transition: 'background-color 0.15s ease, border 0.15s ease'
                         }}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const dragId = e.dataTransfer.getData('text/plain');
-                          if (dragId && dragId !== sp.id) {
-                            handleDragDropSwap(dragId, sp.id);
-                          }
-                        }}
-                        className={`excel-cell-box border-r-none ${highlightedId === sp.id ? 'selected' : ''}`}
-                        style={{ gridRow: r, gridColumn: 2 }}
-                        onClick={() => handleEditClick(sp.id)}
-                      >
-                       {formatMemberText(sp as FamilyMember)}
-                     </div>
-                   );
-                 })}
+                      />
+                    </React.Fragment>
+                  );
+                })}
 
-                 {/* 3. 遞迴渲染所有一般成員與其配偶 (平移 1 欄) */}
-                 {(() => {
-                   const cells: React.ReactNode[] = [];
-                   
-                   const collectCells = (member: FamilyMember, depth: number) => {
-                     const r = rowMap.get(member.id);
-                     const c = getColumnIndex(depth);
-                     
-                     if (r) {
-                       // 主要成員：原本的 Col (1, 3, 5, 7) 平移為 (2, 4, 6, 8)
-                       const colIdx = c === 3 ? 2 : c === 5 ? 4 : c === 7 ? 6 : 8;
-                       let borderClass = '';
-                       if (colIdx > 2) borderClass += ' border-l-thick';
-                       if (member.children.length > 0 && colIdx === 4) borderClass += ' border-r-thick';
+                {/* 1. 渲染被繼承人 (平移至第 2 欄，即 C 欄) */}
+                {(() => {
+                  const r = rowMap.get(rootMember.id);
+                  if (!r) return null;
+                  return (
+                    <div
+                      draggable={true}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('text/plain', rootMember.id);
+                      }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const dragId = e.dataTransfer.getData('text/plain');
+                        if (dragId && dragId !== rootMember.id) {
+                          handleDragDropSwap(dragId, rootMember.id);
+                        }
+                      }}
+                      className={`excel-cell-box border-r-none ${highlightedId === rootMember.id ? 'selected' : ''}`}
+                      style={{ gridRow: r, gridColumn: 2 }}
+                      onClick={() => handleEditClick(rootMember.id)}
+                    >
+                      {formatMemberText(rootMember)}
+                    </div>
+                  );
+                })()}
 
-                       cells.push(
-                         <div 
-                           key={member.id}
-                           draggable={true}
-                           onDragStart={(e) => {
-                             e.dataTransfer.setData('text/plain', member.id);
-                           }}
-                           onDragOver={(e) => e.preventDefault()}
-                           onDrop={(e) => {
-                             e.preventDefault();
-                             e.stopPropagation();
-                             const dragId = e.dataTransfer.getData('text/plain');
-                             if (dragId && dragId !== member.id) {
-                               handleDragDropSwap(dragId, member.id);
-                             }
-                           }}
-                           className={`excel-cell-box ${borderClass} ${highlightedId === member.id ? 'selected' : ''}`}
-                           style={{ gridRow: r, gridColumn: colIdx }}
-                           onClick={() => handleEditClick(member.id)}
-                         >
-                           {formatMemberText(member)}
-                         </div>
-                       );
+                {/* 2. 渲染被繼承人的配偶們 (平移至第 2 欄，即 C 欄) */}
+                {rootSpouses.map(sp => {
+                  const r = rowMap.get(sp.id);
+                  if (!r) return null;
+                  return (
+                    <div
+                      key={sp.id}
+                      draggable={true}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('text/plain', sp.id);
+                      }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const dragId = e.dataTransfer.getData('text/plain');
+                        if (dragId && dragId !== sp.id) {
+                          handleDragDropSwap(dragId, sp.id);
+                        }
+                      }}
+                      className={`excel-cell-box border-r-none ${highlightedId === sp.id ? 'selected' : ''}`}
+                      style={{ gridRow: r, gridColumn: 2 }}
+                      onClick={() => handleEditClick(sp.id)}
+                    >
+                      {formatMemberText(sp as FamilyMember)}
+                    </div>
+                  );
+                })}
 
-                       // 配偶
-                       if (member.spouseId && spousesMap[member.spouseId]) {
-                         const sp = spousesMap[member.spouseId];
-                         const spR = rowMap.get(sp.id);
-                         if (spR) {
-                           cells.push(
-                             <div 
-                               key={sp.id}
-                               draggable={true}
-                               onDragStart={(e) => {
-                                 e.dataTransfer.setData('text/plain', sp.id);
-                               }}
-                               onDragOver={(e) => e.preventDefault()}
-                               onDrop={(e) => {
-                                 e.preventDefault();
-                                 e.stopPropagation();
-                                 const dragId = e.dataTransfer.getData('text/plain');
-                                 if (dragId && dragId !== sp.id) {
-                                   handleDragDropSwap(dragId, sp.id);
-                                 }
-                               }}
-                               className={`excel-cell-box ${borderClass} ${highlightedId === sp.id ? 'selected' : ''}`}
-                               style={{ gridRow: spR, gridColumn: colIdx }}
-                               onClick={() => handleEditClick(sp.id)}
-                             >
-                               {formatMemberText(sp as FamilyMember)}
-                             </div>
-                           );
-                         }
-                       }
-                     }
-                     member.children.forEach(child => collectCells(child, depth + 1));
-                   };
+                {/* 3. 遞迴渲染所有一般成員與其配偶 (平移 1 欄) */}
+                {(() => {
+                  const cells: React.ReactNode[] = [];
 
-                   rootMember.children.forEach(child => collectCells(child, 2));
-                   return cells;
-                 })()}
+                  const collectCells = (member: FamilyMember, depth: number) => {
+                    const r = rowMap.get(member.id);
+                    const c = getColumnIndex(depth);
+
+                    if (r) {
+                      // 主要成員：原本的 Col (1, 3, 5, 7) 平移為 (2, 4, 6, 8)
+                      const colIdx = c === 3 ? 2 : c === 5 ? 4 : c === 7 ? 6 : 8;
+                      let borderClass = '';
+                      if (colIdx > 2) borderClass += ' border-l-thick';
+                      if (member.children.length > 0 && colIdx === 4) borderClass += ' border-r-thick';
+
+                      cells.push(
+                        <div
+                          key={member.id}
+                          draggable={true}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', member.id);
+                          }}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const dragId = e.dataTransfer.getData('text/plain');
+                            if (dragId && dragId !== member.id) {
+                              handleDragDropSwap(dragId, member.id);
+                            }
+                          }}
+                          className={`excel-cell-box ${borderClass} ${highlightedId === member.id ? 'selected' : ''}`}
+                          style={{ gridRow: r, gridColumn: colIdx }}
+                          onClick={() => handleEditClick(member.id)}
+                        >
+                          {formatMemberText(member)}
+                        </div>
+                      );
+
+                      // 配偶
+                      if (member.spouseId && spousesMap[member.spouseId]) {
+                        const sp = spousesMap[member.spouseId];
+                        const spR = rowMap.get(sp.id);
+                        if (spR) {
+                          cells.push(
+                            <div
+                              key={sp.id}
+                              draggable={true}
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('text/plain', sp.id);
+                              }}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const dragId = e.dataTransfer.getData('text/plain');
+                                if (dragId && dragId !== sp.id) {
+                                  handleDragDropSwap(dragId, sp.id);
+                                }
+                              }}
+                              className={`excel-cell-box ${borderClass} ${highlightedId === sp.id ? 'selected' : ''}`}
+                              style={{ gridRow: spR, gridColumn: colIdx }}
+                              onClick={() => handleEditClick(sp.id)}
+                            >
+                              {formatMemberText(sp as FamilyMember)}
+                            </div>
+                          );
+                        }
+                      }
+                    }
+                    member.children.forEach(child => collectCells(child, depth + 1));
+                  };
+
+                  rootMember.children.forEach(child => collectCells(child, 2));
+                  return cells;
+                })()}
 
                 {/* 4. 渲染連線與邊框延伸線 (平移 1 欄) */}
                 {Array.from({ length: maxRow }, (_, rIdx) => rIdx + 1).map(r => {
@@ -1529,10 +1598,10 @@ export default function App() {
                   return [3, 5, 7].map(colIdx => {
                     const hasHLine = horizontalLines.has(`${r}-${colIdx === 3 ? 4 : colIdx === 5 ? 6 : 8}`);
                     const hasVLine = verticalLines.has(`${r}-${colIdx === 3 ? 5 : colIdx === 5 ? 7 : 9}`);
-                    
+
                     return (
-                      <div 
-                        key={`${r}-${colIdx}`} 
+                      <div
+                        key={`${r}-${colIdx}`}
                         className="excel-empty-cell"
                         style={{ gridRow: r, gridColumn: colIdx }}
                       >
@@ -1551,13 +1620,13 @@ export default function App() {
                   });
                 })}
               </div>
-              
+
               {/* 底端宣告 */}
-              <div style={{ 
-                marginTop: '40px', 
-                borderTop: '1px solid #d1d5db', 
-                paddingTop: '20px', 
-                fontSize: '1.25rem', 
+              <div style={{
+                marginTop: '40px',
+                borderTop: '1px solid #d1d5db',
+                paddingTop: '20px',
+                fontSize: '1.25rem',
                 textAlign: 'left',
                 fontFamily: 'var(--font-kai)'
               }}>
@@ -1565,12 +1634,12 @@ export default function App() {
               </div>
             </div>
           </div>
-          
+
           <div className="preview-tip">
             💡 系統會自動為沒有手動指定 Row 的成員計算最緊湊且不重疊的擺放位置，保證下載的 Excel 線條美觀。
           </div>
         </section>
-        
+
       </main>
 
       {/* 頁尾隱私保護與到訪計數聲明 */}
@@ -1595,13 +1664,13 @@ export default function App() {
         {/* 到訪人次與版本控制資訊 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           {visitorCount !== null && (
-            <div style={{ 
-              display: 'inline-flex', 
-              alignItems: 'center', 
-              gap: '6px', 
-              background: 'rgba(99, 102, 241, 0.06)', 
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'rgba(99, 102, 241, 0.06)',
               border: '1px solid rgba(99, 102, 241, 0.12)',
-              padding: '4px 12px', 
+              padding: '4px 12px',
               borderRadius: '16px',
               fontSize: '0.75rem',
               color: 'var(--primary)',
@@ -1614,12 +1683,12 @@ export default function App() {
           )}
 
           <div style={{
-            display: 'inline-flex', 
-            alignItems: 'center', 
+            display: 'inline-flex',
+            alignItems: 'center',
             gap: '4px',
-            background: 'rgba(74, 85, 104, 0.06)', 
+            background: 'rgba(74, 85, 104, 0.06)',
             border: '1px solid rgba(74, 85, 104, 0.12)',
-            padding: '4px 12px', 
+            padding: '4px 12px',
             borderRadius: '16px',
             fontSize: '0.75rem',
             color: '#4a5568',
@@ -1630,12 +1699,12 @@ export default function App() {
           </div>
 
           <div style={{
-            display: 'inline-flex', 
-            alignItems: 'center', 
+            display: 'inline-flex',
+            alignItems: 'center',
             gap: '4px',
-            background: 'rgba(99, 102, 241, 0.06)', 
+            background: 'rgba(99, 102, 241, 0.06)',
             border: '1px solid rgba(99, 102, 241, 0.12)',
-            padding: '4px 12px', 
+            padding: '4px 12px',
             borderRadius: '16px',
             fontSize: '0.75rem',
             color: 'var(--primary)',
@@ -1653,15 +1722,15 @@ export default function App() {
             <h3 style={{ fontSize: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <User size={20} color="var(--primary)" /> 編輯個人檔案
             </h3>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              
+
               <div className="form-row-2">
                 <div className="form-group">
                   <label>姓名</label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
+                  <input
+                    type="text"
+                    className="form-input"
                     value={selectedMember.name}
                     onChange={e => setSelectedMember({ ...selectedMember, name: e.target.value })}
                   />
@@ -1669,7 +1738,7 @@ export default function App() {
                 <div className="form-group">
                   <label>性別</label>
                   {/* 性別選單：變更時同步重設出生別，避免「男性選到長女」的邏輯衝突 */}
-                  <select 
+                  <select
                     className="form-select"
                     value={selectedMember.gender}
                     onChange={e => {
@@ -1700,7 +1769,7 @@ export default function App() {
                   const suffix = selectedMember.gender === 'M' ? '男' : '女';
                   const adoptedOption = selectedMember.gender === 'M' ? '養子' : '養女';
                   return (
-                    <select 
+                    <select
                       className="form-select"
                       value={selectedMember.birthOrder}
                       onChange={e => setSelectedMember({ ...selectedMember, birthOrder: e.target.value })}
@@ -1721,9 +1790,9 @@ export default function App() {
               {selectedMember.isSpouse && (
                 <div className="form-group">
                   <label>配偶關係說明 (例如: "配偶:林賴招月")</label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
+                  <input
+                    type="text"
+                    className="form-input"
                     value={selectedMember.spouseRelationText || ''}
                     onChange={e => setSelectedMember({ ...selectedMember, spouseRelationText: e.target.value })}
                   />
@@ -1731,24 +1800,24 @@ export default function App() {
               )}
 
               {/* 出生日期選單與西元自動換算組件 */}
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: '10px', 
-                border: '1px solid var(--border-light)', 
-                padding: '16px', 
-                borderRadius: '12px', 
-                background: 'rgba(255, 255, 255, 0.4)' 
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                border: '1px solid var(--border-light)',
+                padding: '16px',
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.4)'
               }}>
                 <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)' }}>出生日期</label>
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
                   gap: '6px',
                   flexWrap: 'wrap'
                 }}>
                   {/* 年號 */}
-                  <select 
+                  <select
                     className="form-select"
                     style={{ flex: '1.5', minWidth: '75px', padding: '8px 4px', fontSize: '0.85rem' }}
                     value={birthEra}
@@ -1763,10 +1832,10 @@ export default function App() {
                   </select>
 
                   {/* 年份數字輸入 */}
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     min="1"
-                    className="form-input" 
+                    className="form-input"
                     style={{ flex: '1.2', minWidth: '55px', padding: '8px 6px', fontSize: '0.85rem', textAlign: 'center' }}
                     value={birthYear}
                     onChange={e => setBirthYear(parseInt(e.target.value) || 1)}
@@ -1774,7 +1843,7 @@ export default function App() {
                   <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>年</span>
 
                   {/* 月份選單 */}
-                  <select 
+                  <select
                     className="form-select"
                     style={{ flex: '1.1', minWidth: '50px', padding: '8px 4px', fontSize: '0.85rem' }}
                     value={birthMonth}
@@ -1787,7 +1856,7 @@ export default function App() {
                   <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>月</span>
 
                   {/* 日期選單 */}
-                  <select 
+                  <select
                     className="form-select"
                     style={{ flex: '1.1', minWidth: '50px', padding: '8px 4px', fontSize: '0.85rem' }}
                     value={birthDay}
@@ -1799,12 +1868,12 @@ export default function App() {
                   </select>
                   <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>日</span>
                 </div>
-                
+
                 {/* 自動換算西元顯示區 */}
-                <div style={{ 
-                  marginTop: '4px', 
-                  fontSize: '0.85rem', 
-                  color: 'var(--primary)', 
+                <div style={{
+                  marginTop: '4px',
+                  fontSize: '0.85rem',
+                  color: 'var(--primary)',
                   fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
@@ -1819,23 +1888,23 @@ export default function App() {
               </div>
 
               {/* 死亡日期切換與選單組件 */}
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: '10px', 
-                border: formErrors.deathDate ? '2px solid #ef4444' : '1px solid var(--border-light)', 
-                padding: '16px', 
-                borderRadius: '12px', 
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                border: formErrors.deathDate ? '2px solid #ef4444' : '1px solid var(--border-light)',
+                padding: '16px',
+                borderRadius: '12px',
                 background: formErrors.deathDate ? '#fdf2f2' : 'rgba(255, 255, 255, 0.4)',
                 transition: 'all 0.2s ease-in-out'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label style={{ fontSize: '0.9rem', fontWeight: 600, color: formErrors.deathDate ? '#b91c1c' : 'var(--text-main)' }}>死亡日期</label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-main)' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={isDeceased} 
-                      onChange={e => setIsDeceased(e.target.checked)} 
+                    <input
+                      type="checkbox"
+                      checked={isDeceased}
+                      onChange={e => setIsDeceased(e.target.checked)}
                     />
                     <span>已歿 (註記死亡日期)</span>
                   </label>
@@ -1843,14 +1912,14 @@ export default function App() {
 
                 {isDeceased ? (
                   <>
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
                       gap: '6px',
                       flexWrap: 'wrap'
                     }}>
                       {/* 年號 */}
-                      <select 
+                      <select
                         className="form-select"
                         style={{ flex: '1.5', minWidth: '75px', padding: '8px 4px', fontSize: '0.85rem' }}
                         value={deathEra}
@@ -1865,10 +1934,10 @@ export default function App() {
                       </select>
 
                       {/* 年份數字輸入 */}
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         min="1"
-                        className="form-input" 
+                        className="form-input"
                         style={{ flex: '1.2', minWidth: '55px', padding: '8px 6px', fontSize: '0.85rem', textAlign: 'center' }}
                         value={deathYear}
                         onChange={e => setDeathYear(parseInt(e.target.value) || 1)}
@@ -1876,7 +1945,7 @@ export default function App() {
                       <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>年</span>
 
                       {/* 月份選單 */}
-                      <select 
+                      <select
                         className="form-select"
                         style={{ flex: '1.1', minWidth: '50px', padding: '8px 4px', fontSize: '0.85rem' }}
                         value={deathMonth}
@@ -1889,7 +1958,7 @@ export default function App() {
                       <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>月</span>
 
                       {/* 日期選單 */}
-                      <select 
+                      <select
                         className="form-select"
                         style={{ flex: '1.1', minWidth: '50px', padding: '8px 4px', fontSize: '0.85rem' }}
                         value={deathDay}
@@ -1903,10 +1972,10 @@ export default function App() {
                     </div>
 
                     {/* 自動換算西元顯示區 */}
-                    <div style={{ 
-                      marginTop: '4px', 
-                      fontSize: '0.85rem', 
-                      color: 'var(--danger)', 
+                    <div style={{
+                      marginTop: '4px',
+                      fontSize: '0.85rem',
+                      color: 'var(--danger)',
                       fontWeight: 600,
                       display: 'flex',
                       alignItems: 'center',
@@ -1956,10 +2025,10 @@ export default function App() {
                 )}
 
                 {formErrors.deathDate && (
-                  <div style={{ 
-                    color: '#b91c1c', 
-                    fontSize: '0.85rem', 
-                    fontWeight: 600, 
+                  <div style={{
+                    color: '#b91c1c',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
                     marginTop: '4px',
                     display: 'flex',
                     alignItems: 'center',
@@ -1977,18 +2046,18 @@ export default function App() {
               <div className="form-row-2">
                 <div className="form-group">
                   <label>父親姓名</label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
+                  <input
+                    type="text"
+                    className="form-input"
                     value={selectedMember.fatherName}
                     onChange={e => setSelectedMember({ ...selectedMember, fatherName: e.target.value })}
                   />
                 </div>
                 <div className="form-group">
                   <label>母親姓名</label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
+                  <input
+                    type="text"
+                    className="form-input"
                     value={selectedMember.motherName}
                     onChange={e => setSelectedMember({ ...selectedMember, motherName: e.target.value })}
                   />
@@ -2004,7 +2073,7 @@ export default function App() {
                   transition: 'all 0.2s ease-in-out'
                 }}>
                   <label style={{ color: formErrors.successionStatus ? '#b91c1c' : 'var(--text-main)', fontWeight: formErrors.successionStatus ? 600 : undefined }}>繼承情形</label>
-                  <select 
+                  <select
                     className="form-select"
                     style={{ borderColor: formErrors.successionStatus ? '#ef4444' : undefined }}
                     value={selectedMember.successionStatus}
@@ -2014,9 +2083,9 @@ export default function App() {
                       if (status === 'substitute-inherit') text = '代位繼承';
                       else if (status === 'sub-inherit') text = '再轉繼承';
                       else if (status === 'no-inherit') text = `無繼承權("${noInheritReason.trim()}")`;
-                      
-                      setSelectedMember({ 
-                        ...selectedMember, 
+
+                      setSelectedMember({
+                        ...selectedMember,
                         successionStatus: status,
                         successionStatusText: text
                       });
@@ -2028,10 +2097,10 @@ export default function App() {
                     <option value="no-inherit">無繼承權</option>
                   </select>
                   {formErrors.successionStatus && (
-                    <div style={{ 
-                      color: '#b91c1c', 
-                      fontSize: '0.85rem', 
-                      fontWeight: 600, 
+                    <div style={{
+                      color: '#b91c1c',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
                       marginTop: '6px',
                       display: 'flex',
                       alignItems: 'center',
@@ -2057,19 +2126,19 @@ export default function App() {
                   transition: 'all 0.2s ease-in-out'
                 }}>
                   <label style={{ color: formErrors.noInheritReason ? '#b91c1c' : 'var(--text-main)', fontWeight: 600 }}>無繼承權原因</label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
+                  <input
+                    type="text"
+                    className="form-input"
                     style={{ borderColor: formErrors.noInheritReason ? '#ef4444' : undefined }}
                     placeholder="請輸入原因（如：拋棄繼承、聲明喪失等）"
                     value={noInheritReason}
                     onChange={e => setNoInheritReason(e.target.value)}
                   />
                   {formErrors.noInheritReason && (
-                    <div style={{ 
-                      color: '#b91c1c', 
-                      fontSize: '0.85rem', 
-                      fontWeight: 600, 
+                    <div style={{
+                      color: '#b91c1c',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
                       marginTop: '6px',
                       display: 'flex',
                       alignItems: 'center',
@@ -2096,10 +2165,10 @@ export default function App() {
                   - 若修改的是被繼承人，其他成員的 Row 將以等數方式（delta）一起調整
                   - 若修改的是代位繼承/再轉繼承成員，其後代 Row 也會以等數方式一起調整
                 */}
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   min={1}
-                  className="form-input" 
+                  className="form-input"
                   value={selectedMember.targetRow ?? rowMap.get(selectedMember.id) ?? ''}
                   onChange={e => {
                     // 判斷條件：有輸入就轉為整數，清空則設為 undefined（回歸演算法自動排版）
@@ -2114,8 +2183,8 @@ export default function App() {
             <div className="modal-actions" style={{ justifyContent: 'space-between', width: '100%' }}>
               <div>
                 {selectedMember.id !== rootMember.id && (
-                  <button 
-                    className="btn btn-danger" 
+                  <button
+                    className="btn btn-danger"
                     onClick={() => {
                       if (window.confirm(`確定要刪除 ${selectedMember.name} 嗎？`)) {
                         handleDeleteMember(selectedMember.id);
@@ -2216,76 +2285,76 @@ export default function App() {
                     targetRow: effectiveTargetRow
                   });
                 }}>
-                儲存變更
+                  儲存變更
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- 新手使用教學引導 Modal --- */}
+      {isIntroOpen && (
+        <div className="modal-overlay" onClick={() => setIsIntroOpen(false)}>
+          <div className="glass-panel modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', width: '90%' }}>
+            <h3 style={{ fontSize: '1.4rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '2px solid rgba(99, 102, 241, 0.1)', paddingBottom: '12px', margin: '0 0 16px 0', color: 'var(--primary)' }}>
+              🌟 歡迎使用「線上繼承系統表產生器」！
+            </h3>
+
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', lineHeight: '1.6', marginBottom: '16px' }}>
+              這是一個完全免費、<strong>個資安全不落地</strong>的專業系統工具。只需簡單三個步驟，您就能輕鬆繪製出符合民法繼承規範的系統表：
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '1.25rem', padding: '6px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '32px', height: '32px', flexShrink: 0 }}>1️⃣</span>
+                <div>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', margin: '0 0 4px 0' }}>設定「被繼承人」基本資料</h4>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
+                    請先點選畫面<strong>左上方的第一個節點（被繼承人）</strong>，編輯其姓名與死亡日期等基本資料並儲存。這是一切繼承順位的起點。
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '1.25rem', padding: '6px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '32px', height: '32px', flexShrink: 0 }}>2️⃣</span>
+                <div>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', margin: '0 0 4px 0' }}>依序新增「配偶」與「子女」</h4>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
+                    儲存被繼承人後，點選該卡片下方的<strong>「+配偶」</strong>或<strong>「+子女」</strong>按鈕，便可依序往下建立二代、三代之家族繼承樹，並可隨時編輯個別成員的繼承情形（如拋棄、代位、無繼承權等）。
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '1.25rem', padding: '6px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '32px', height: '32px', flexShrink: 0 }}>3️⃣</span>
+                <div>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', margin: '0 0 4px 0' }}>靈活調整版面並匯出</h4>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
+                    您可以隨時在右側的 Excel 排版預覽中，直接<strong>「拖曳卡片對調位置 (Swap)」</strong>微調直屬成員的行位順序。確認無誤後，點擊右上角的<strong>「下載 Excel 系統表」</strong>即可取得完美排版的 Excel 檔案！
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600 }}>
+                <span>🔒</span> 純前端防護：本站自身不儲存個資，第三方服務可能使用 Cookie。
+              </div>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setIsIntroOpen(false);
+                  localStorage.setItem('has-seen-intro-guide-v1.2', 'true');
+                }}
+                style={{ padding: '8px 20px', borderRadius: '6px' }}
+              >
+                我知道了，開始使用！
               </button>
             </div>
           </div>
         </div>
-      </div>
-    )}
-
-    {/* --- 新手使用教學引導 Modal --- */}
-    {isIntroOpen && (
-      <div className="modal-overlay" onClick={() => setIsIntroOpen(false)}>
-        <div className="glass-panel modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', width: '90%' }}>
-          <h3 style={{ fontSize: '1.4rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '2px solid rgba(99, 102, 241, 0.1)', paddingBottom: '12px', margin: '0 0 16px 0', color: 'var(--primary)' }}>
-            🌟 歡迎使用「線上繼承系統表產生器」！
-          </h3>
-          
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', lineHeight: '1.6', marginBottom: '16px' }}>
-            這是一個完全免費、<strong>個資安全不落地</strong>的專業系統工具。只需簡單三個步驟，您就能輕鬆繪製出符合民法繼承規範的系統表：
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '1.25rem', padding: '6px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '32px', height: '32px', flexShrink: 0 }}>1️⃣</span>
-              <div>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', margin: '0 0 4px 0' }}>設定「被繼承人」基本資料</h4>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
-                  請先點選畫面<strong>左上方的第一個節點（被繼承人）</strong>，編輯其姓名與死亡日期等基本資料並儲存。這是一切繼承順位的起點。
-                </p>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '1.25rem', padding: '6px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '32px', height: '32px', flexShrink: 0 }}>2️⃣</span>
-              <div>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', margin: '0 0 4px 0' }}>依序新增「配偶」與「子女」</h4>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
-                  儲存被繼承人後，點選該卡片下方的<strong>「+配偶」</strong>或<strong>「+子女」</strong>按鈕，便可依序往下建立二代、三代之家族繼承樹，並可隨時編輯個別成員的繼承情形（如拋棄、代位、無繼承權等）。
-                </p>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '1.25rem', padding: '6px', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', width: '32px', height: '32px', flexShrink: 0 }}>3️⃣</span>
-              <div>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', margin: '0 0 4px 0' }}>靈活調整版面並匯出</h4>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
-                  您可以隨時在右側的 Excel 排版預覽中，直接<strong>「拖曳卡片對調位置 (Swap)」</strong>微調直屬成員的行位順序。確認無誤後，點擊右上角的<strong>「下載 Excel 系統表」</strong>即可取得完美排版的 Excel 檔案！
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600 }}>
-              <span>🔒</span> 純前端防護：本站自身不儲存個資，第三方服務可能使用 Cookie。
-            </div>
-            <button 
-              className="btn btn-primary" 
-              onClick={() => {
-                setIsIntroOpen(false);
-                localStorage.setItem('has-seen-intro-guide-v1.2', 'true');
-              }}
-              style={{ padding: '8px 20px', borderRadius: '6px' }}
-            >
-              我知道了，開始使用！
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
+      )}
 
     </div>
   );

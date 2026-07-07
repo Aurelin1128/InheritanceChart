@@ -449,3 +449,121 @@
   box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
   animation: pulse-dot 2.5s infinite;
 }
+
+/* ==========================================
+   RWD 手機與平板螢幕響應式適配
+   設計說明：遵循手機、平板及電腦三種主流尺寸適配，優化觸控與可讀性
+   ========================================== */
+@media (max-width: 768px) {
+  /* 標頭自適應：改為垂直排列 */
+  .header-container {
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+  }
+
+  .header-title-area {
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
+  }
+
+  .header-title-area p {
+    text-align: center !important;
+  }
+
+  .header-title {
+    font-size: 1.3rem;
+  }
+
+  /* 標頭右側按鈕群組：垂直排列或等寬 */
+  .header-container > div:last-child {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .header-container .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 10px;
+  }
+
+  /* 主區域版面：調整內距 */
+  .main-layout {
+    padding: 12px 16px;
+  }
+
+  /* 側邊編輯區：改為自然高度流，避免雙重滾動條 */
+  .sidebar-panel {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  /* 預覽面板：改為自動高度 */
+  .preview-panel {
+    height: auto;
+    min-height: 450px;
+    padding: 16px !important;
+  }
+
+  /* 預覽 Header 與 Zoom 控制器置中/垂直排列 */
+  .preview-header {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 12px;
+  }
+
+  .zoom-controller {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* 編輯彈窗 (Modal) 自適應：防止矮螢幕手機（如橫屏）時按鈕溢出 */
+  .modal-content {
+    width: 95%;
+    max-height: 85vh;
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+
+  .form-row-2 {
+    grid-template-columns: 1fr; /* 表單改為單欄，方便觸控 */
+    gap: 10px;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .modal-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* 頁尾改為直排 */
+  .footer-container {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 16px 20px;
+    gap: 12px;
+  }
+}
+
+/* 平板適配 (1024px 以下) */
+@media (max-width: 1024px) {
+  .main-layout {
+    padding: 16px 20px;
+  }
+  
+  .sidebar-panel {
+    max-height: none;
+  }
+  
+  .preview-panel {
+    height: auto;
+  }
+}
