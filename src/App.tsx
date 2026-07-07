@@ -212,20 +212,30 @@ export default function App() {
   // 網頁預覽縮放狀態
   const [zoom, setZoom] = useState(1.0);
 
-  // 根據螢幕尺寸初始化預覽區的縮放比例，提升行動端/平板 RWD 體驗
+  // 根據螢幕尺寸動態計算最適合的縮放比例，防止手機破圖或溢出
+  // 業務邏輯：Excel 表格的預設實體總寬度為 980px。
+  //   在手機與平板（寬度小於 1024px）下，自動扣除兩側 padding 後計算出剛好能貼合螢幕寬度的最佳 zoom 值，
+  //   使任何手機螢幕（如 iPhone 17 的 393px/430px）一進來就能完整看清圖表，不再發生右側溢出。
   useEffect(() => {
     const handleZoomInit = () => {
-      const width = window.innerWidth;
-      if (width < 640) {
-        setZoom(0.5); // 手機預設縮小到 50%
-      } else if (width < 1024) {
-        setZoom(0.75); // 平板預設縮小到 75%
+      const screenWidth = window.innerWidth;
+      if (screenWidth < 1024) {
+        // 手機與平板：動態計算
+        // 扣除主版面 padding (32px) 與預覽區 padding (16px)，約 48px
+        const availableWidth = screenWidth - 48;
+        const autoZoom = Number((availableWidth / 980).toFixed(2));
+        // 限制縮放比例介於 0.35 到 0.95 之間，保證文字不至於過小
+        setZoom(Math.max(0.35, Math.min(0.95, autoZoom)));
       } else {
-        setZoom(1.0); // 電腦預設 100%
+        // 電腦端預設 100%
+        setZoom(1.0);
       }
     };
     handleZoomInit();
-    // 只有在載入時自動初始化一次，後續允許使用者手動拉動 Slider 調整
+    
+    // 監聽視窗尺寸改變，即時重算以維持最優排版
+    window.addEventListener('resize', handleZoomInit);
+    return () => window.removeEventListener('resize', handleZoomInit);
   }, []);
 
   // 出生日期拆解與換算狀態

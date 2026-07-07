@@ -520,6 +520,15 @@
     justify-content: space-between;
   }
 
+  /* 預覽容器與 Excel 紙張在手機上縮小 padding，釋放更多可用寬度給圖表 */
+  .preview-viewport {
+    padding: 8px !important;
+  }
+
+  .excel-grid-preview {
+    padding: 16px 8px !important; /* 減少兩側留白，避免撐破 */
+  }
+
   /* 編輯彈窗 (Modal) 自適應：防止矮螢幕手機（如橫屏）時按鈕溢出 */
   .modal-content {
     width: 95%;
