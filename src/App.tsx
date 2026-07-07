@@ -1634,6 +1634,7 @@ export default function App() {
               </div>
             </div>
           </div>
+        </div>
 
           <div className="preview-tip">
             💡 系統會自動為沒有手動指定 Row 的成員計算最緊湊且不重疊的擺放位置，保證下載的 Excel 線條美觀。
