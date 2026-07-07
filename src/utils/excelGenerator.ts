@@ -207,7 +207,7 @@ export const calculateAutoLayout = (
   spousesMap: Record<string, Omit<FamilyMember, 'children'>>
 ): Map<string, number> => {
   const rowMap = new Map<string, number>();
-  let currentRow = 5; // 起始列
+  let currentRow = 2; // 起始列（從 Row 2 開始，與被繼承人同行對齊）
 
   // 遞迴函數，為成員及其子樹分配行座標
   const assignRows = (member: FamilyMember, isLastSibling: boolean, depth: number) => {
@@ -254,16 +254,18 @@ export const calculateAutoLayout = (
     assignRows(child, isLast, 2);
   });
 
-  // 設定被繼承人本人的 Row (對齊第一個子女的 Row，即 5)
-  rowMap.set(root.id, 5);
+  // 設定被繼承人本人的 Row（固定在 Row 2，版面較緊湊）
+  // 業務邏輯：被繼承人為繼承表的根節點，固定在 Row 2，使標題與內容不會過於空曠
+  rowMap.set(root.id, 2);
 
-  // 設定被繼承人多任配偶的 Row (若有 dummy targetRow 則直接用，否則自動分散)
+  // 設定被繼承人多任配偶的 Row (若有手動 targetRow 則直接用，否則自動分散)
+  // 業務邏輯：第一任配偶預設在 Row 4，第二任在 Row 6，依此類推（間距 2，與非配偶間隔規範一致）
   rootSpouses.forEach((spouse, index) => {
     if (spouse.targetRow) {
       rowMap.set(spouse.id, spouse.targetRow);
     } else {
-      // 預設將多任配偶均勻排在被繼承人下方
-      rowMap.set(spouse.id, 5 + (index + 1) * 4);
+      // 預設將多任配偶均勻排在被繼承人下方，每任間距 2 列
+      rowMap.set(spouse.id, 2 + (index + 1) * 2);
     }
   });
 

@@ -70,6 +70,29 @@ const convertToCommonEra = (era: string, year: number, month: number, day: numbe
   return `西元 ${ceYear} 年 ${month} 月 ${day} 日`;
 };
 
+// 將年號日期轉換為西元年整數，用於日期大小比較
+// 業務邏輯：計算出生日期與死亡日期對應的西元年份整數，
+// 並組合成可比較的數值 (yyyymmdd 格式整數)，供防呆邏輯判斷先後順序
+const convertToCEYear = (era: string, year: number): number => {
+  if (isNaN(year)) return 0;
+  if (era === '民國') return year + 1911;
+  if (era === '民前') return 1912 - year;
+  if (era === '明治') return year + 1867;
+  if (era === '大正') return year + 1911;
+  if (era === '昭和') return year + 1925;
+  if (era === '西元') return year;
+  return 0;
+};
+
+// 將年號日期組合成可比較的整數 (yyyymmdd)
+// 業務邏輯：透過 yyyymmdd 整數大小比較，可快速判斷兩個日期的先後順序
+// 判斷條件：deathDateInt < birthDateInt 即為「死亡日期早於出生日期」的非法情形
+const toDateInt = (era: string, year: number, month: number, day: number): number => {
+  const ceYear = convertToCEYear(era, year);
+  // 格式：年份 * 10000 + 月份 * 100 + 日，例如 1965/3/22 → 19650322
+  return ceYear * 10000 + month * 100 + day;
+};
+
 // 取得特定年號、年分、月份之最大天數（處理大月、小月、平年、閏年）
 // 業務邏輯：確保使用者在網頁上點選的日期為有效曆法日期
 const getDaysInMonth = (era: string, year: number, month: number): number => {
@@ -1094,10 +1117,17 @@ export default function App() {
         const minChildR = Math.min(...childRows);
         const maxChildR = Math.max(...childRows);
         
-        // 業務邏輯：計算父母本人的 Row 以及配偶的 Row，以便將縱向線延伸過去與水平線相交
-        let minCoupleR = rIdx;
-        let maxCoupleR = rIdx;
+        // 業務邏輯：縱向連接線的範圍由「父親本人 Row」到「最後一個子女 Row」決定
+        // 設計說明：配偶本身已經有水平線（'-----'）接入縱線，不需將配偶 Row 納入縱線範圍
+        // 判斷條件：對一般繼承人（非被繼承人），配偶如果在父親下方，
+        //   臨舉配偶 Row 將導致縱線多畫一格到配偶行，產生多餘的、沒有子女分支的縱線縮長
+        // 例外：被繼承人（depth=1）的配偶（rootSpouses）仍納入範圍，因為配偶列可能在子女之間需要被縱線覆蓋
+        let minR: number;
+        let maxR: number;
         if (member.id === rootMember.id) {
+          // 被繼承人：納入所有配偶 Row ，因為配偶列與子女列可能交錯，縱線需覆蓋整個範圍
+          let minCoupleR = rIdx;
+          let maxCoupleR = rIdx;
           rootSpouses.forEach(sp => {
             const spRow = rowMap.get(sp.id);
             if (spRow) {
@@ -1105,16 +1135,14 @@ export default function App() {
               maxCoupleR = Math.max(maxCoupleR, spRow);
             }
           });
-        } else if (member.spouseId && spousesMap[member.spouseId]) {
-          const spRow = rowMap.get(member.spouseId);
-          if (spRow) {
-            minCoupleR = Math.min(minCoupleR, spRow);
-            maxCoupleR = Math.max(maxCoupleR, spRow);
-          }
+          minR = Math.min(minChildR, minCoupleR);
+          maxR = Math.max(maxChildR, maxCoupleR);
+        } else {
+          // 一般繼承人：縱線僅從「父親自身 Row」到「子女最遠 Row」，不包含配偶
+          // 判斷條件：配偶透過水平線自行接入縱線，不需將配偶 Row 展長縱線，否則相命中只有一個子女時會多畫一段多餘縱線
+          minR = Math.min(rIdx, minChildR);
+          maxR = Math.max(rIdx, maxChildR);
         }
-
-        const minR = Math.min(minChildR, minCoupleR);
-        const maxR = Math.max(maxChildR, maxCoupleR);
         const nextC = getColumnIndex(depth + 1);
 
         // 垂直線範圍
@@ -1598,7 +1626,22 @@ export default function App() {
             fontWeight: 600,
             userSelect: 'none'
           }}>
-            <span>⚙️</span> 版本：v1.2.0 (Build 20260706)
+            <span>⚙️</span> 版本：v1.3.0 (Build 20260707)
+          </div>
+
+          <div style={{
+            display: 'inline-flex', 
+            alignItems: 'center', 
+            gap: '4px',
+            background: 'rgba(99, 102, 241, 0.06)', 
+            border: '1px solid rgba(99, 102, 241, 0.12)',
+            padding: '4px 12px', 
+            borderRadius: '16px',
+            fontSize: '0.75rem',
+            color: 'var(--primary)',
+            fontWeight: 600
+          }}>
+            <span>✉️</span> 意見信箱：<a href="mailto:aurelian1128@gmail.com" style={{ color: 'var(--primary)', textDecoration: 'none' }}>aurelian1128@gmail.com</a>
           </div>
         </div>
       </footer>
@@ -1875,6 +1918,36 @@ export default function App() {
                       <Info size={14} />
                       <span>西元換算：{convertToCommonEra(deathEra, deathYear, deathMonth, deathDay)}</span>
                     </div>
+
+                    {/* 即時日期邏輯警告：死亡日期不得早於出生日期 */}
+                    {/* 業務邏輯：比較出生與死亡的 yyyymmdd 整數值，若死亡日期 < 出生日期則顯示橘色即時警示 */}
+                    {/* 判斷條件：toDateInt(death) < toDateInt(birth)，且兩個日期均為有效數值時才觸發 */}
+                    {(() => {
+                      const birthInt = toDateInt(birthEra, birthYear, birthMonth, birthDay);
+                      const deathInt = toDateInt(deathEra, deathYear, deathMonth, deathDay);
+                      // 只有死亡日期確實早於出生日期時才顯示（等於同一天允許，如出生當天死亡）
+                      if (deathInt < birthInt) {
+                        return (
+                          <div style={{
+                            marginTop: '6px',
+                            fontSize: '0.85rem',
+                            color: '#92400e',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: 'rgba(251, 191, 36, 0.15)',
+                            border: '1px solid rgba(251, 191, 36, 0.5)',
+                            padding: '8px 12px',
+                            borderRadius: '8px'
+                          }}>
+                            <AlertTriangle size={14} color="#d97706" />
+                            <span>⚠️ 注意：死亡日期（{convertToCommonEra(deathEra, deathYear, deathMonth, deathDay)}）早於出生日期（{convertToCommonEra(birthEra, birthYear, birthMonth, birthDay)}），請確認是否填寫正確！</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </>
                 ) : (
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '4px 0' }}>
@@ -2088,6 +2161,18 @@ export default function App() {
                   if (isSuccessor && isDeceased && selectedMember.successionStatus === 'inherit') {
                     errors.successionStatus = '成員已歿時，繼承情形不能為「繼承」，請選擇「代位繼承」或「再轉繼承」！';
                     errors.deathDate = '成員已確認死亡，繼承情形請改為「代位繼承」或「再轉繼承」！';
+                  }
+
+                  // 業務邏輯：死亡日期不得早於出生日期
+                  // 設計說明：將兩個年號日期轉換為可比較的 yyyymmdd 整數後進行大小比較，
+                  // 若 deathDateInt < birthDateInt 表示死亡日期早於出生日期，此為邏輯錯誤應阻止儲存
+                  // 判斷條件：僅在「已歿」勾選時執行（未勾選代表存活，無死亡日期不需比較）
+                  if (isDeceased) {
+                    const birthInt = toDateInt(birthEra, birthYear, birthMonth, birthDay);
+                    const deathInt = toDateInt(deathEra, deathYear, deathMonth, deathDay);
+                    if (deathInt < birthInt) {
+                      errors.deathDate = `死亡日期（${convertToCommonEra(deathEra, deathYear, deathMonth, deathDay)}）不得早於出生日期（${convertToCommonEra(birthEra, birthYear, birthMonth, birthDay)}），請重新確認！`;
+                    }
                   }
 
                   if (Object.keys(errors).length > 0) {
