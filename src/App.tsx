@@ -1195,7 +1195,7 @@ export default function App() {
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <div className="app-container">
 
       {/* 頂部導覽列 */}
       <header className="header-container">
@@ -1653,18 +1653,7 @@ export default function App() {
 
       </main>
 
-      {/* 頁尾隱私保護與到訪計數聲明 */}
-      <footer className="footer-container" style={{
-        background: '#f8fafc',
-        borderTop: '1px solid var(--border-light)',
-        padding: '12px 24px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '12px',
-        zIndex: 50
-      }}>
+      <footer className="footer-container">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
           <span style={{ fontSize: '1rem' }}>🔒</span>
           <span style={{ textAlign: 'left' }}>
