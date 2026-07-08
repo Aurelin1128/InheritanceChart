@@ -2096,6 +2096,57 @@ export default function App() {
                     <option value="sub-inherit">再轉繼承</option>
                     <option value="no-inherit">無繼承權</option>
                   </select>
+
+                  {/* 
+                    業務邏輯：即時警告 - 繼承人死亡日期早於被繼承人死亡日期，但未選擇代位繼承
+                    設計說明：當前編輯成員非被繼承人且非配偶（即為血親繼承人），且已標記為死亡時，
+                    如果其死亡日期早於被繼承人之死亡日期，民法規定應由其直系卑親屬「代位繼承」。
+                    如果此時繼承狀態未選定為「代位繼承」，顯示警告提示以提醒使用者修改。
+                    判斷條件：
+                    1. 編輯主體非被繼承人 (isSuccessor = true)
+                    2. 編輯主體非配偶 (!selectedMember.isSpouse)
+                    3. 編輯主體已歿 (isDeceased = true)
+                    4. 繼承狀態並非代位繼承 (successionStatus !== 'substitute-inherit')
+                    5. 被繼承人的死亡日期已設定 (rootDeathParsed.isEmpty = false)
+                    6. 編輯主體死亡日期整數值小於被繼承人死亡日期整數值 (deathInt < rootDeathInt)
+                  */}
+                  {(() => {
+                    const isSuccessor = selectedMember.id !== rootMember.id;
+                    if (isSuccessor && !selectedMember.isSpouse && isDeceased && selectedMember.successionStatus !== 'substitute-inherit') {
+                      const rootDeathParsed = parseDateString(rootMember.deathDate);
+                      if (!rootDeathParsed.isEmpty) {
+                        const rootDeathInt = toDateInt(
+                          rootDeathParsed.era,
+                          rootDeathParsed.year,
+                          rootDeathParsed.month,
+                          rootDeathParsed.day
+                        );
+                        const deathInt = toDateInt(deathEra, deathYear, deathMonth, deathDay);
+                        if (deathInt < rootDeathInt) {
+                          return (
+                            <div style={{
+                              marginTop: '6px',
+                              fontSize: '0.85rem',
+                              color: '#b91c1c',
+                              fontWeight: 600,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: 'rgba(239, 68, 68, 0.05)',
+                              border: '1px solid rgba(239, 68, 68, 0.2)',
+                              padding: '8px 12px',
+                              borderRadius: '8px'
+                            }}>
+                              <AlertTriangle size={14} color="#ef4444" />
+                              <span>⚠️ 繼承人死亡日期（{convertToCommonEra(deathEra, deathYear, deathMonth, deathDay)}）早於被繼承人死亡日期（{rootMember.deathDate}），繼承狀態僅能選擇「代位繼承」！</span>
+                            </div>
+                          );
+                        }
+                      }
+                    }
+                    return null;
+                  })()}
+
                   {formErrors.successionStatus && (
                     <div style={{
                       color: '#b91c1c',
@@ -2232,7 +2283,7 @@ export default function App() {
                     errors.deathDate = '成員已確認死亡，繼承情形請改為「代位繼承」或「再轉繼承」！';
                   }
 
-                  // 業務邏輯：死亡日期不得早於出生日期
+                   // 業務邏輯：死亡日期不得早於出生日期
                   // 設計說明：將兩個年號日期轉換為可比較的 yyyymmdd 整數後進行大小比較，
                   // 若 deathDateInt < birthDateInt 表示死亡日期早於出生日期，此為邏輯錯誤應阻止儲存
                   // 判斷條件：僅在「已歿」勾選時執行（未勾選代表存活，無死亡日期不需比較）
@@ -2241,6 +2292,32 @@ export default function App() {
                     const deathInt = toDateInt(deathEra, deathYear, deathMonth, deathDay);
                     if (deathInt < birthInt) {
                       errors.deathDate = `死亡日期（${convertToCommonEra(deathEra, deathYear, deathMonth, deathDay)}）不得早於出生日期（${convertToCommonEra(birthEra, birthYear, birthMonth, birthDay)}），請重新確認！`;
+                    }
+                  }
+
+                  // 業務邏輯：繼承人死亡日期早於被繼承人死亡日期時，僅能選擇「代位繼承」
+                  // 設計說明：當非配偶之繼承人先於被繼承人死亡時，依法在辦理繼承時僅能由其直系卑親屬代位繼承。
+                  // 如果此時繼承狀態選為其他，則視為填寫錯誤應阻止儲存。
+                  // 判斷條件：
+                  // 1. 當前編輯者非被繼承人且非配偶 (isSuccessor && !selectedMember.isSpouse)
+                  // 2. 當前編輯者已歿 (isDeceased = true)
+                  // 3. 被繼承人有死亡日期 (!rootDeathParsed.isEmpty)
+                  // 4. 繼承人死亡日期早於被繼承人死亡日期 (deathInt < rootDeathInt)
+                  // 5. 繼承狀態非「代位繼承」 (selectedMember.successionStatus !== 'substitute-inherit')
+                  if (isSuccessor && !selectedMember.isSpouse && isDeceased) {
+                    const rootDeathParsed = parseDateString(rootMember.deathDate);
+                    if (!rootDeathParsed.isEmpty) {
+                      const rootDeathInt = toDateInt(
+                        rootDeathParsed.era,
+                        rootDeathParsed.year,
+                        rootDeathParsed.month,
+                        rootDeathParsed.day
+                      );
+                      const deathInt = toDateInt(deathEra, deathYear, deathMonth, deathDay);
+                      if (deathInt < rootDeathInt && selectedMember.successionStatus !== 'substitute-inherit') {
+                        errors.successionStatus = '繼承人死亡日期早於被繼承人死亡日期，繼承狀態僅能選擇「代位繼承」！';
+                        errors.deathDate = `繼承人死亡日期（${convertToCommonEra(deathEra, deathYear, deathMonth, deathDay)}）早於被繼承人死亡日期（${rootMember.deathDate}），僅能選擇「代位繼承」！`;
+                      }
                     }
                   }
 
